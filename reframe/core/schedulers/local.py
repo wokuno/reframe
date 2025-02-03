@@ -7,6 +7,7 @@ import errno
 import os
 import signal
 import socket
+import stat
 import time
 
 import reframe.core.schedulers as sched
@@ -57,6 +58,17 @@ class LocalJobScheduler(sched.JobScheduler):
         # Run from the absolute path
         f_stdout = open(job.stdout, 'w+')
         f_stderr = open(job.stderr, 'w+')
+
+        while True:
+            try:
+                if os.access(job.script_filename, os.X_OK):
+                    break
+                else:
+                    os.chmod(job.script_filename, os.stat(job.script_filename).st_mode | stat.S_IXUSR)
+            except PermissionError:
+                pass
+            except FileNotFoundError:
+                pass
 
         # The new process starts also a new session (session leader), so that
         # we can later kill any other processes that this might spawn by just
